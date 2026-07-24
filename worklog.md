@@ -119,3 +119,41 @@ Stage Summary:
 - Distance decreases (1.6km → 1.3km), speed varies (34→46 km/h)
 - Clean lint (0 errors, 0 warnings)
 - Browser-verified: map renders, markers visible, GPS polling works
+---
+Task ID: 1
+Agent: Main Agent
+Task: Add game-style mini maps to public dashboard emergency cards
+
+Work Log:
+- Analyzed user's uploaded reference image (mappp.jpg.jpeg) using VLM
+- User wanted small popup-style mini maps embedded INSIDE each emergency card (like game minimaps), NOT a big full-page map
+- Created `/home/z/my-project/src/components/shared/mini-map.tsx` — compact Leaflet map component
+  - Uses direct Leaflet API (no React-Leaflet) for full control
+  - No zoom/drag/interaction (pure display, like a game minimap)
+  - Vehicle emoji marker with pulse ring animation
+  - Destination marker (red pin with "H")
+  - Dashed route polyline between vehicle and destination
+  - ETA overlay badge (top-right) with live green dot
+  - Speed overlay badge (bottom-left)
+  - Game-style corner frame decoration (4 white border corners)
+  - Dark border styling for game-like appearance
+  - Auto-fits bounds to show both vehicle and destination
+- Redesigned `/home/z/my-project/src/components/public/public-dashboard.tsx`
+  - Removed the big 2/3-column EmergencyMap component entirely
+  - Emergency cards now have horizontal layout: info left, mini map right
+  - Mini map is `sm:w-56 lg:w-64` wide with `h-36` / `h-full` height
+  - Cards show: vehicle emoji, destination, driver info, ETA/speed/distance badges, progress bar
+  - Responsive: stacks vertically on mobile (info on top, map below)
+  - Dynamic import for MiniMap with `ssr: false` (Leaflet requirement)
+- Fixed lint warning (unused eslint-disable directive)
+- Verified zero console errors in browser
+- Verified GPS simulation API works (vehicles move, ETAs update)
+- Browser testing confirmed: mini maps render with markers, routes, ETA overlays, speed overlays
+- No visual bugs or layout issues detected by VLM analysis
+
+Stage Summary:
+- New file: `/home/z/my-project/src/components/shared/mini-map.tsx`
+- Modified: `/home/z/my-project/src/components/public/public-dashboard.tsx`
+- Mini maps are game-style: small, dark-bordered, with overlays, no interaction controls
+- GPS simulation continues to move vehicles and update mini maps every 4 seconds
+- Desktop and mobile layouts working correctly
