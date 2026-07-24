@@ -88,3 +88,34 @@ Stage Summary:
 - Complete role-based dashboard system
 - Responsive design throughout
 - Emergency-themed animations (pulse, flash)
+
+---
+Task ID: 5
+Agent: Main Orchestrator
+Task: Add live mini-map with GPS tracking and ETA to public dashboard
+
+Work Log:
+- Created GPS simulation API endpoint at POST /api/gps-simulate that moves active vehicles toward destinations every tick
+- Created EmergencyMap Leaflet component (src/components/shared/emergency-map.tsx) with:
+  - Dynamic import (SSR-safe)
+  - Vehicle emoji markers with colored pulsing rings
+  - Red hospital destination pin markers
+  - Dashed route polylines between vehicle and destination
+  - Info popups on marker click showing driver name, ETA, speed, distance
+  - Auto-fit bounds to show all markers
+  - Custom CSS pulse animation injected dynamically
+- Rewrote PublicDashboard with 3-column layout: map (2/3) + sidebar cards (1/3)
+- Added 4-second polling interval for live GPS position updates
+- Added expand/collapse map button
+- Added user geolocation detection for "My Location" on map
+- Added distance progress bars on vehicle cards
+- Added real-time "Updated Xs ago" indicator
+- Re-seeded database with fresh active emergencies
+
+Stage Summary:
+- GPS simulation moves vehicles 3-5% closer to destination every 4 seconds
+- Map shows ambulance/fire/police emoji markers + red hospital pins + dashed routes
+- ETA counts down in real-time (verified: 2m52s → 1m42s in 6 seconds)
+- Distance decreases (1.6km → 1.3km), speed varies (34→46 km/h)
+- Clean lint (0 errors, 0 warnings)
+- Browser-verified: map renders, markers visible, GPS polling works
