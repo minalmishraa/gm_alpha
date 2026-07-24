@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Navigation, MapPin, Gauge, Clock, AlertTriangle, Square, Radio, Play, CheckCircle2 } from 'lucide-react';
+import { Navigation, MapPin, Gauge, Clock, AlertTriangle, Square, Radio, Play, CheckCircle2, Loader2 } from 'lucide-react';
 import { VEHICLE_TYPE_CONFIG, SAMPLE_LOCATIONS } from '@/lib/constants';
 import type { Emergency } from '@/lib/types';
 
@@ -22,6 +22,7 @@ export function DriverDashboard() {
   const [destLat, setDestLat] = useState('');
   const [destLng, setDestLng] = useState('');
   const [elapsed, setElapsed] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   const driver = currentUser?.driver;
 
@@ -55,10 +56,22 @@ export function DriverDashboard() {
   }, [driverActiveEmergency]);
 
   const handleStartEmergency = async () => {
-    if (!driver?.id || !destination) {
-      toast.error('Please select a destination');
+    if (!driver?.id) {
+      toast.error('Driver profile not found. Please log in again.');
       return;
     }
+    if (!destination.trim()) {
+      toast.error('Please enter or select a destination');
+      return;
+    }
+    const lat = parseFloat(destLat);
+    const lng = parseFloat(destLng);
+    if (isNaN(lat) || isNaN(lng)) {
+      toast.error('Please select a destination with valid coordinates');
+      return;
+    }
+
+    setSubmitting(true);
     try {
       const res = await fetch('/api/emergencies', {
         method: 'POST',
@@ -66,19 +79,27 @@ export function DriverDashboard() {
         body: JSON.stringify({
           driverId: driver.id,
           vehicleType: driver.vehicleType,
-          destinationName: destination,
-          destinationLatitude: parseFloat(destLat) || 27.71,
-          destinationLongitude: parseFloat(destLng) || 85.31,
+          destinationName: destination.trim(),
+          destinationLatitude: lat,
+          destinationLongitude: lng,
         }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error || 'Failed to start emergency'); return; }
-      toast.success('Emergency trip started! Navigate carefully.');
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to start emergency');
+        return;
+      }
+      toast.success('🚨 Emergency trip started! Navigate carefully.');
       setDriverActiveEmergency(data.emergency);
       setStartDialog(false);
       setDestination('');
+      setDestLat('');
+      setDestLng('');
+      loadDashboard();
     } catch {
-      toast.error('Failed to start emergency');
+      toast.error('Network error. Please check your connection and try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -264,7 +285,16 @@ export function DriverDashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStartDialog(false)}>Cancel</Button>
-            <Button onClick={handleStartEmergency}><Play className="h-4 w-4 mr-1" /> Start Emergency</Button>
+            <Button onClick={handleStartEmergency} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Starting...
+                </>
+              ) : (
+                <><Play className="h-4 w-4 mr-1" /> Start Emergency</>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

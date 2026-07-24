@@ -157,3 +157,24 @@ Stage Summary:
 - Mini maps are game-style: small, dark-bordered, with overlays, no interaction controls
 - GPS simulation continues to move vehicles and update mini maps every 4 seconds
 - Desktop and mobile layouts working correctly
+---
+Task ID: fix-start-emergency
+Agent: Main Agent
+Task: Fix "Start Emergency" button not responding on driver dashboard
+
+Work Log:
+- Diagnosed the issue: SQLite database was returning "attempt to write a readonly database" error on POST /api/emergencies
+- Root cause: After DB rebuild, the Prisma client cached stale driver IDs causing FK constraint violations
+- Also found: driver dashboard had weak validation (no loading state, no coordinate validation)
+- Fixed by: restarting dev server to refresh Prisma client + improving handleStartEmergency()
+- Added Loader2 spinner to dialog button during submission
+- Added proper validation: check driver.id, check destination not empty, validate lat/lng are numbers
+- Added setSubmitting state to prevent double-clicks
+- Added loadDashboard() call after successful creation
+- Added clear of destLat/destLng after dialog close
+- Browser-tested: Login → Driver Dashboard → Start Emergency → Select Patan Hospital → Start → Active panel shows with correct data
+
+Stage Summary:
+- File modified: src/components/driver/driver-dashboard.tsx
+- Added: submitting state, Loader2 import, better validation, loading spinner on button
+- The core "Start Emergency" flow is now fully working and tested
