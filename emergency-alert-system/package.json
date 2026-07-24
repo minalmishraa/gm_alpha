@@ -1,0 +1,10 @@
+{
+  "name": "emergency-alert-system",
+  "version": "1.0.0",
+  "description": "Smart Emergency Vehicle Intersection Alert System",
+  "private": true,
+  "scripts": {
+    "install:all": "cd backend && npm install",
+    "dev": "cd backend && npm start"
+  }
+}
