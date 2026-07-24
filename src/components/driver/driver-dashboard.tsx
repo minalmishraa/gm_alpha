@@ -10,9 +10,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Navigation, MapPin, Gauge, Clock, AlertTriangle, Square, Radio, Play, CheckCircle2, Loader2 } from 'lucide-react';
+import { Navigation, MapPin, Gauge, Clock, AlertTriangle, Square, Radio, Play, CheckCircle2, Loader2, Wifi } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { VEHICLE_TYPE_CONFIG, SAMPLE_LOCATIONS } from '@/lib/constants';
 import type { Emergency } from '@/lib/types';
+import { LiveGpsTracker } from '@/components/shared/live-gps-tracker';
+import { broadcastLiveSync } from '@/lib/sync-broadcast';
+
+const LocationPickerMap = dynamic(() => import('@/components/shared/location-picker-map'), {
+  ssr: false,
+  loading: () => <Skeleton className="h-64 w-full rounded-lg" />,
+});
 
 export function DriverDashboard() {
   const { currentUser, driverActiveEmergency, setDriverActiveEmergency, activeEmergencies, setActiveEmergencies } = useAppStore();
@@ -91,6 +99,7 @@ export function DriverDashboard() {
       }
       toast.success('🚨 Emergency trip started! Navigate carefully.');
       setDriverActiveEmergency(data.emergency);
+      broadcastLiveSync('EMERGENCY_STARTED', data.emergency);
       setStartDialog(false);
       setDestination('');
       setDestLat('');
@@ -112,6 +121,7 @@ export function DriverDashboard() {
         body: JSON.stringify({ id: driverActiveEmergency.id, status: 'COMPLETED' }),
       });
       toast.success('Emergency trip completed successfully!');
+      broadcastLiveSync('EMERGENCY_ENDED', { id: driverActiveEmergency.id });
       setDriverActiveEmergency(null);
       loadDashboard();
     } catch {
@@ -137,6 +147,7 @@ export function DriverDashboard() {
 
   return (
     <div className="space-y-6">
+      <LiveGpsTracker onSyncRefresh={loadDashboard} />
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Driver Dashboard</h1>
@@ -244,31 +255,51 @@ export function DriverDashboard() {
 
       {/* Start Emergency Dialog */}
       <Dialog open={startDialog} onOpenChange={setStartDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" /> Start Emergency Trip
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Interactive Location Picker Map */}
             <div className="space-y-2">
-              <Label>Destination Name *</Label>
-              <Input placeholder="Hospital or location name" value={destination} onChange={(e) => setDestination(e.target.value)} />
+              <Label className="text-sm font-semibold flex items-center justify-between">
+                <span>Select Destination on Map</span>
+                <span className="text-xs font-normal text-muted-foreground">Click map, drag pin, or search</span>
+              </Label>
+              <LocationPickerMap
+                initialLat={destLat ? parseFloat(destLat) : (driver?.currentLatitude ?? undefined)}
+                initialLng={destLng ? parseFloat(destLng) : (driver?.currentLongitude ?? undefined)}
+                autoDetectGPSOnMount={true}
+                onSelectLocation={(lat, lng, addressName) => {
+                  setDestLat(lat.toString());
+                  setDestLng(lng.toString());
+                  if (addressName) {
+                    setDestination(addressName);
+                  }
+                }}
+              />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-1 space-y-1.5">
+                <Label>Destination Name *</Label>
+                <Input placeholder="Hospital or location name" value={destination} onChange={(e) => setDestination(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
                 <Label>Latitude</Label>
                 <Input placeholder="27.7172" value={destLat} onChange={(e) => setDestLat(e.target.value)} />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label>Longitude</Label>
                 <Input placeholder="85.324" value={destLng} onChange={(e) => setDestLng(e.target.value)} />
               </div>
             </div>
 
             <div>
-              <Label className="text-xs text-muted-foreground">Quick Select</Label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <Label className="text-xs text-muted-foreground font-semibold">Quick Hospital Shortcuts</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                 {SAMPLE_LOCATIONS.hospitals.map((loc) => (
                   <Button key={loc.name} variant="outline" size="sm" className="justify-start text-xs h-auto py-2"
                     onClick={() => selectSampleDestination(loc.name, loc.lat, loc.lng)}>
@@ -279,11 +310,11 @@ export function DriverDashboard() {
             </div>
 
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-xs text-yellow-700 dark:text-yellow-400">
-              <AlertTriangle className="h-3 w-3 inline mr-1" />
+              <AlertTriangle className="h-3.5 w-3.5 inline mr-1" />
               Starting an emergency trip will notify all nearby display boards and users. Use this only for genuine emergencies.
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-2">
             <Button variant="outline" onClick={() => setStartDialog(false)}>Cancel</Button>
             <Button onClick={handleStartEmergency} disabled={submitting}>
               {submitting ? (
