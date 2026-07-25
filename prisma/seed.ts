@@ -22,7 +22,7 @@ async function seed() {
   const admin = await db.user.create({
     data: {
       name: 'Admin User',
-      email: 'admin@seriras.com',
+      email: 'admin@lifeline.com',
       phone: '+977-9800000001',
       password: adminPassword,
       role: 'ADMIN',
@@ -34,12 +34,12 @@ async function seed() {
   const driverPassword = await hashPassword('driver123');
   const driverUsers = [];
   const driverData = [
-    { name: 'Raj Sharma', email: 'raj@seriras.com', phone: '+977-9800000002', vehicle: 'KA 101 JA 1234', type: 'AMBULANCE', license: 'DL-2024-001', verified: true, online: true, lat: 27.7172, lng: 85.324 },
-    { name: 'Sita Devi', email: 'sita@seriras.com', phone: '+977-9800000003', vehicle: 'KA 201 JA 5678', type: 'AMBULANCE', license: 'DL-2024-002', verified: true, online: true, lat: 27.7050, lng: 85.3150 },
-    { name: 'Hari Thapa', email: 'hari@seriras.com', phone: '+977-9800000004', vehicle: 'KA 301 FB 9012', type: 'FIRE_BRIGADE', license: 'DL-2024-003', verified: true, online: false, lat: 27.7100, lng: 85.3280 },
-    { name: 'Gita Magar', email: 'gita@seriras.com', phone: '+977-9800000005', vehicle: 'KA 401 PL 3456', type: 'POLICE', license: 'DL-2024-004', verified: true, online: true, lat: 27.7200, lng: 85.3350 },
-    { name: 'Bikash Rai', email: 'bikash@seriras.com', phone: '+977-9800000006', vehicle: 'KA 501 DR 7890', type: 'AMBULANCE', license: 'DL-2024-005', verified: false, online: false, lat: null, lng: null },
-    { name: 'Anita Gurung', email: 'anita@seriras.com', phone: '+977-9800000007', vehicle: 'KA 601 FB 2345', type: 'FIRE_BRIGADE', license: 'DL-2024-006', verified: false, online: false, lat: null, lng: null },
+    { name: 'Raj Sharma', email: 'raj@lifeline.com', phone: '+977-9800000002', vehicle: 'KA 101 JA 1234', type: 'AMBULANCE', license: 'DL-2024-001', verified: true, online: true, lat: 27.7172, lng: 85.324 },
+    { name: 'Sita Devi', email: 'sita@lifeline.com', phone: '+977-9800000003', vehicle: 'KA 201 JA 5678', type: 'AMBULANCE', license: 'DL-2024-002', verified: true, online: true, lat: 27.7050, lng: 85.3150 },
+    { name: 'Hari Thapa', email: 'hari@lifeline.com', phone: '+977-9800000004', vehicle: 'KA 301 FB 9012', type: 'FIRE_BRIGADE', license: 'DL-2024-003', verified: true, online: false, lat: 27.7100, lng: 85.3280 },
+    { name: 'Gita Magar', email: 'gita@lifeline.com', phone: '+977-9800000005', vehicle: 'KA 401 PL 3456', type: 'POLICE', license: 'DL-2024-004', verified: true, online: true, lat: 27.7200, lng: 85.3350 },
+    { name: 'Bikash Rai', email: 'bikash@lifeline.com', phone: '+977-9800000006', vehicle: 'KA 501 DR 7890', type: 'AMBULANCE', license: 'DL-2024-005', verified: false, online: false, lat: null, lng: null },
+    { name: 'Anita Gurung', email: 'anita@lifeline.com', phone: '+977-9800000007', vehicle: 'KA 601 FB 2345', type: 'FIRE_BRIGADE', license: 'DL-2024-006', verified: false, online: false, lat: null, lng: null },
   ];
 
   for (const d of driverData) {
@@ -73,11 +73,11 @@ async function seed() {
   const publicPassword = await hashPassword('user123');
   const publicUsers = [];
   const publicData = [
-    { name: 'Ram Bahadur', email: 'ram@seriras.com', phone: '+977-9800000010' },
-    { name: 'Sita Kumari', email: 'kumari@seriras.com', phone: '+977-9800000011' },
-    { name: 'Krishna Adhikari', email: 'krishna@seriras.com', phone: '+977-9800000012' },
-    { name: 'Maya Lama', email: 'maya@seriras.com', phone: '+977-9800000013' },
-    { name: 'Deepak Shrestha', email: 'deepak@seriras.com', phone: '+977-9800000014' },
+    { name: 'Ram Bahadur', email: 'ram@lifeline.com', phone: '+977-9800000010' },
+    { name: 'Sita Kumari', email: 'kumari@lifeline.com', phone: '+977-9800000011' },
+    { name: 'Krishna Adhikari', email: 'krishna@lifeline.com', phone: '+977-9800000012' },
+    { name: 'Maya Lama', email: 'maya@lifeline.com', phone: '+977-9800000013' },
+    { name: 'Deepak Shrestha', email: 'deepak@lifeline.com', phone: '+977-9800000014' },
   ];
 
   for (const p of publicData) {
@@ -299,10 +299,10 @@ async function seed() {
 
   console.log('✅ Database seeded successfully!');
   console.log('\n📋 Test Accounts:');
-  console.log('  Admin:  admin@seriras.com / admin123');
-  console.log('  Driver: raj@seriras.com / driver123');
-  console.log('  Driver (unverified): bikash@seriras.com / driver123');
-  console.log('  Public: ram@seriras.com / user123');
+  console.log('  Admin:  admin@lifeline.com / admin123');
+  console.log('  Driver: raj@lifeline.com / driver123');
+  console.log('  Driver (unverified): bikash@lifeline.com / driver123');
+  console.log('  Public: ram@lifeline.com / user123');
   console.log('\n📊 Created:');
   console.log(`  ${1} Admin`);
   console.log(`  ${driverUsers.length} Drivers (${driverUsers.filter(d => d.driver.verified).length} verified, ${driverUsers.filter(d => !d.driver.verified).length} pending)`);

@@ -12,9 +12,9 @@ import { motion } from 'framer-motion';
 import { ROLE_CONFIG } from '@/lib/constants';
 
 const TEST_ACCOUNTS = [
-  { label: 'Admin', email: 'admin@seriras.com', password: 'admin123', desc: 'Full system access' },
-  { label: 'Driver', email: 'raj@seriras.com', password: 'driver123', desc: 'Ambulance driver' },
-  { label: 'Public', email: 'ram@seriras.com', password: 'user123', desc: 'Regular user' },
+  { label: 'Admin', email: 'admin@lifeline.com', password: 'admin123', desc: 'Full system access' },
+  { label: 'Driver', email: 'raj@lifeline.com', password: 'driver123', desc: 'Ambulance driver' },
+  { label: 'Public', email: 'ram@lifeline.com', password: 'user123', desc: 'Regular user' },
 ];
 
 export function LoginForm() {
@@ -77,7 +77,7 @@ export function LoginForm() {
           >
             🚑
           </motion.div>
-          <h1 className="text-2xl font-bold tracking-tight">SERIRAS</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Lifeline</h1>
           <p className="text-sm text-muted-foreground">
             Smart Emergency Response & Intelligent Roadside Alert System
           </p>

@@ -34,7 +34,7 @@ export function LiveGpsTracker({ onSyncRefresh }: LiveGpsTrackerProps) {
 
   // 2. Active Driver GPS Auto-Tracking (watchPosition)
   useEffect(() => {
-    if (!currentUser?.driver || !driverActiveEmergency) {
+    if (!currentUser?.driver || !driverActiveEmergency || driverActiveEmergency.status !== 'ACTIVE') {
       if (watchIdRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;

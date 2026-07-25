@@ -46,7 +46,6 @@ function getNavItems(role: string): NavItem[] {
   if (role === 'ADMIN') {
     return [
       { label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" />, view: 'admin-dashboard' },
-      { label: 'Live Tracking', icon: <Monitor className="h-4 w-4" />, view: 'admin-dashboard' },
       { label: 'Drivers', icon: <Truck className="h-4 w-4" />, view: 'admin-drivers' },
       { label: 'Display Boards', icon: <Radio className="h-4 w-4" />, view: 'admin-boards' },
       { label: 'Emergencies', icon: <AlertTriangle className="h-4 w-4" />, view: 'admin-emergencies' },
@@ -97,7 +96,7 @@ export function AppShell() {
           </Button>
           <div className="flex items-center gap-2">
             <span className="text-xl">🚑</span>
-            <span className="font-bold text-sm">SERIRAS</span>
+            <span className="font-bold text-sm">Lifeline</span>
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" className="relative" onClick={() => setCurrentView('public-alerts')}>
@@ -122,7 +121,7 @@ export function AppShell() {
           <div className="h-14 flex items-center gap-3 px-4 border-b border-sidebar-border">
             <span className="text-2xl">🚑</span>
             <div>
-              <h1 className="font-bold text-sm tracking-wide">SERIRAS</h1>
+              <h1 className="font-bold text-sm tracking-wide">Lifeline</h1>
               <p className="text-[10px] text-sidebar-foreground/60">Emergency Response System</p>
             </div>
           </div>
@@ -131,7 +130,7 @@ export function AppShell() {
           <nav className="p-2 space-y-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 8rem)' }}>
             {navItems.map((item) => (
               <Button
-                key={item.view}
+                key={`${item.view}-${item.label}`}
                 variant={currentView === item.view ? 'secondary' : 'ghost'}
                 className="w-full justify-start gap-3 px-3 h-10 text-sm"
                 onClick={() => {

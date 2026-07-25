@@ -30,30 +30,35 @@ export function DriverDashboard() {
   const [destLat, setDestLat] = useState('');
   const [destLng, setDestLng] = useState('');
   const [elapsed, setElapsed] = useState(0);
+  const [stopping, setStopping] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const driver = currentUser?.driver;
 
-  const loadDashboard = useCallback(async () => {
-    setLoading(true);
+  const loadDashboard = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const res = await fetch('/api/emergencies');
+      if (!res.ok) return;
       const data = await res.json();
-      const driverEmergencies = data.emergencies.filter(
+      const emergenciesList = Array.isArray(data?.emergencies) ? data.emergencies : [];
+      const driverEmergencies = emergenciesList.filter(
         (e: Emergency) => e.driverId === driver?.id && e.status === 'ACTIVE'
       );
       setActiveEmergencies(driverEmergencies);
       if (driverEmergencies.length > 0) {
         setDriverActiveEmergency(driverEmergencies[0]);
+      } else {
+        setDriverActiveEmergency(null);
       }
     } catch {
-      console.error('Failed to load dashboard');
+      // Silent error handler
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [driver?.id, setActiveEmergencies, setDriverActiveEmergency]);
 
-  useEffect(() => { loadDashboard(); }, [loadDashboard]);
+  useEffect(() => { loadDashboard(true); }, [loadDashboard]);
 
   useEffect(() => {
     if (!driverActiveEmergency) { setElapsed(0); return; }
@@ -64,19 +69,37 @@ export function DriverDashboard() {
   }, [driverActiveEmergency]);
 
   const handleStartEmergency = async () => {
-    if (!driver?.id) {
-      toast.error('Driver profile not found. Please log in again.');
+    let activeDriverId = driver?.id;
+    let activeVehicleType = driver?.vehicleType || 'AMBULANCE';
+
+    if (!activeDriverId && currentUser?.id) {
+      try {
+        const res = await fetch('/api/drivers');
+        const data = await res.json();
+        const found = data.drivers?.find((d: { userId: string }) => d.userId === currentUser.id);
+        if (found) {
+          activeDriverId = found.id;
+          activeVehicleType = found.vehicleType;
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (!activeDriverId) {
+      toast.error('Driver profile not found. Please re-login as a driver.');
       return;
     }
-    if (!destination.trim()) {
-      toast.error('Please enter or select a destination');
-      return;
-    }
+
     const lat = parseFloat(destLat);
     const lng = parseFloat(destLng);
     if (isNaN(lat) || isNaN(lng)) {
-      toast.error('Please select a destination with valid coordinates');
+      toast.error('Please click on the map or select a hospital to set destination coordinates');
       return;
+    }
+
+    let finalDestination = destination.trim();
+    if (!finalDestination) {
+      finalDestination = `Emergency Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      setDestination(finalDestination);
     }
 
     setSubmitting(true);
@@ -85,9 +108,9 @@ export function DriverDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          driverId: driver.id,
-          vehicleType: driver.vehicleType,
-          destinationName: destination.trim(),
+          driverId: activeDriverId,
+          vehicleType: activeVehicleType,
+          destinationName: finalDestination,
           destinationLatitude: lat,
           destinationLongitude: lng,
         }),
@@ -104,7 +127,7 @@ export function DriverDashboard() {
       setDestination('');
       setDestLat('');
       setDestLng('');
-      loadDashboard();
+      await loadDashboard(false);
     } catch {
       toast.error('Network error. Please check your connection and try again.');
     } finally {
@@ -113,19 +136,27 @@ export function DriverDashboard() {
   };
 
   const handleStopEmergency = async () => {
-    if (!driverActiveEmergency) return;
+    if (!driverActiveEmergency || stopping) return;
+    const targetId = driverActiveEmergency.id;
+    setStopping(true);
+    setDriverActiveEmergency(null); // Immediately clear local active emergency to halt GPS watch
     try {
-      await fetch('/api/emergencies', {
+      const res = await fetch('/api/emergencies', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: driverActiveEmergency.id, status: 'COMPLETED' }),
+        body: JSON.stringify({ id: targetId, status: 'COMPLETED' }),
       });
-      toast.success('Emergency trip completed successfully!');
-      broadcastLiveSync('EMERGENCY_ENDED', { id: driverActiveEmergency.id });
-      setDriverActiveEmergency(null);
-      loadDashboard();
+      if (res.ok) {
+        toast.success('Emergency trip completed successfully!');
+        broadcastLiveSync('EMERGENCY_ENDED', { id: targetId });
+      } else {
+        toast.error('Failed to stop emergency trip');
+      }
+      await loadDashboard(false);
     } catch {
       toast.error('Failed to stop emergency');
+    } finally {
+      setStopping(false);
     }
   };
 
@@ -147,7 +178,7 @@ export function DriverDashboard() {
 
   return (
     <div className="space-y-6">
-      <LiveGpsTracker onSyncRefresh={loadDashboard} />
+      <LiveGpsTracker onSyncRefresh={() => loadDashboard(false)} />
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Driver Dashboard</h1>
@@ -156,11 +187,20 @@ export function DriverDashboard() {
           </p>
         </div>
         {driverActiveEmergency ? (
-          <Button variant="destructive" onClick={handleStopEmergency} className="gap-2">
-            <Square className="h-4 w-4" /> End Emergency
+          <Button variant="destructive" onClick={handleStopEmergency} disabled={stopping} className="gap-2">
+            {stopping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />}
+            {stopping ? 'Ending Emergency...' : 'End Emergency'}
           </Button>
         ) : (
-          <Button onClick={() => setStartDialog(true)} className="gap-2">
+          <Button type="button" onClick={() => {
+            if (!destLat || !destLng) {
+              const defaultLoc = SAMPLE_LOCATIONS.hospitals[0];
+              setDestination(defaultLoc.name);
+              setDestLat(defaultLoc.lat.toString());
+              setDestLng(defaultLoc.lng.toString());
+            }
+            setStartDialog(true);
+          }} className="gap-2">
             <Play className="h-4 w-4" /> Start Emergency
           </Button>
         )}

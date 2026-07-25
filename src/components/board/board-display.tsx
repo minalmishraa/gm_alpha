@@ -82,7 +82,7 @@ export function BoardDisplay() {
       <div className={`rounded-xl border-2 p-8 text-center transition-all duration-500 ${isAlerting ? 'bg-black text-red-500 border-red-500 emergency-pulse' : 'bg-black/90 text-green-400 border-green-500/50'}`}>
         <div className="flex items-center justify-center gap-2 mb-4">
           <Radio className="h-5 w-5" />
-          <span className="text-xs font-mono uppercase tracking-widest opacity-70">SERIRAS Display Board</span>
+          <span className="text-xs font-mono uppercase tracking-widest opacity-70">Lifeline Display Board</span>
         </div>
 
         {selectedBoard && (

@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SERIRAS - Smart Emergency Response & Intelligent Roadside Alert System",
+  title: "Lifeline - Smart Emergency Response & Intelligent Roadside Alert System",
   description: "Real-time emergency vehicle tracking, roadside alerts, and intelligent response coordination system.",
-  keywords: ["emergency", "response", "ambulance", "real-time", "tracking", "roadside", "alerts", "SERIRAS"],
-  authors: [{ name: "SERIRAS Team" }],
+  keywords: ["emergency", "response", "ambulance", "real-time", "tracking", "roadside", "alerts", "Lifeline"],
+  authors: [{ name: "Lifeline Team" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },

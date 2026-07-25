@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { VEHICLE_TYPE_CONFIG } from '@/lib/constants';
@@ -67,19 +67,60 @@ function createMiniDestinationIcon() {
 export default function MiniMap({ emergency, className = '' }: MiniMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const markersLayerRef = useRef<L.LayerGroup | null>(null);
-  const routesLayerRef = useRef<L.LayerGroup | null>(null);
+  const vehicleMarkerRef = useRef<L.Marker | null>(null);
+  const destMarkerRef = useRef<L.Marker | null>(null);
+  const polylineRef = useRef<L.Polyline | null>(null);
+
+  const [routeGeometry, setRouteGeometry] = useState<L.LatLngExpression[]>([]);
 
   const config = useMemo(() => {
     return VEHICLE_TYPE_CONFIG[emergency.vehicleType as keyof typeof VEHICLE_TYPE_CONFIG] ?? VEHICLE_TYPE_CONFIG.AMBULANCE;
   }, [emergency.vehicleType]);
 
-  // ── Initialize map once ──
+  const vLat = emergency.currentLatitude ?? emergency.destinationLatitude;
+  const vLng = emergency.currentLongitude ?? emergency.destinationLongitude;
+  const dLat = emergency.destinationLatitude;
+  const dLng = emergency.destinationLongitude;
+
+  // ── Fetch Real Road Navigation Polyline via OpenStreetMap OSRM API ──
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRealRoadRoute = async () => {
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${vLng},${vLat};${dLng},${dLat}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.routes && data.routes.length > 0) {
+            const coords: [number, number][] = data.routes[0].geometry.coordinates;
+            // OSRM returns [lon, lat], convert to Leaflet [lat, lon]
+            const leafletCoords: L.LatLngExpression[] = coords.map(([lon, lat]) => [lat, lon]);
+            if (isMounted) {
+              setRouteGeometry(leafletCoords);
+              return;
+            }
+          }
+        }
+      } catch {
+        // Fallback to straight line
+      }
+      if (isMounted) {
+        setRouteGeometry([[vLat, vLng], [dLat, dLng]]);
+      }
+    };
+
+    fetchRealRoadRoute();
+    return () => {
+      isMounted = false;
+    };
+  }, [vLat, vLng, dLat, dLng]);
+
+  // ── Initialize map once on mount ──
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
-      center: [emergency.destinationLatitude, emergency.destinationLongitude],
+      center: [dLat, dLng],
       zoom: 14,
       zoomControl: false,
       attributionControl: false,
@@ -95,13 +136,32 @@ export default function MiniMap({ emergency, className = '' }: MiniMapProps) {
       maxZoom: 19,
     }).addTo(map);
 
-    const markersLayer = L.layerGroup().addTo(map);
-    const routesLayer = L.layerGroup().addTo(map);
-    markersLayerRef.current = markersLayer;
-    routesLayerRef.current = routesLayer;
+    // Initial vehicle marker
+    const vMarker = L.marker([vLat, vLng], { icon: createMiniVehicleIcon(emergency.vehicleType) }).addTo(map);
+    // Initial destination marker
+    const dMarker = L.marker([dLat, dLng], { icon: createMiniDestinationIcon() }).addTo(map);
+    // Initial polyline
+    const polyline = L.polyline([[vLat, vLng], [dLat, dLng]], {
+      color: config.color,
+      weight: 3.5,
+      opacity: 0.85,
+      dashArray: '8, 8',
+      lineCap: 'round',
+      lineJoin: 'round',
+    }).addTo(map);
+
+    vehicleMarkerRef.current = vMarker;
+    destMarkerRef.current = dMarker;
+    polylineRef.current = polyline;
     mapRef.current = map;
 
-    // Inject pulse animation (only once)
+    // Fit bounds once at initialization
+    const bounds = L.latLngBounds([[vLat, vLng], [dLat, dLng]]);
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [22, 22], maxZoom: 15 });
+    }
+
+    // Inject pulse animation CSS if needed
     const styleId = 'mini-map-anim-style';
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style');
@@ -118,61 +178,41 @@ export default function MiniMap({ emergency, className = '' }: MiniMapProps) {
     return () => {
       map.remove();
       mapRef.current = null;
-      markersLayerRef.current = null;
-      routesLayerRef.current = null;
+      vehicleMarkerRef.current = null;
+      destMarkerRef.current = null;
+      polylineRef.current = null;
     };
-  // Intentionally empty — map initializes once
-  }, []);
+  }, []); // Run once on mount
 
-  // ── Update markers when emergency data changes ──
+  // ── Smooth updates without map re-creation or DOM flickering ──
   useEffect(() => {
-    const map = mapRef.current;
-    const markersLayer = markersLayerRef.current;
-    const routesLayer = routesLayerRef.current;
-    if (!map || !markersLayer || !routesLayer) return;
+    if (!mapRef.current) return;
 
-    markersLayer.clearLayers();
-    routesLayer.clearLayers();
-
-    const vLat = emergency.currentLatitude ?? emergency.destinationLatitude;
-    const vLng = emergency.currentLongitude ?? emergency.destinationLongitude;
-    const dLat = emergency.destinationLatitude;
-    const dLng = emergency.destinationLongitude;
-
-    const vPos: L.LatLngExpression = [vLat, vLng];
-    const dPos: L.LatLngExpression = [dLat, dLng];
-
-    // Vehicle marker
-    markersLayer.addLayer(
-      L.marker(vPos, { icon: createMiniVehicleIcon(emergency.vehicleType) })
-    );
-
-    // Destination marker
-    markersLayer.addLayer(
-      L.marker(dPos, { icon: createMiniDestinationIcon() })
-    );
-
-    // Route polyline
-    const routePts = buildRoutePoints([vLat, vLng], [dLat, dLng]);
-    routesLayer.addLayer(
-      L.polyline(routePts, {
-        color: config.color,
-        weight: 3,
-        opacity: 0.8,
-        dashArray: '8, 10',
-        lineCap: 'round' as const,
-        lineJoin: 'round' as const,
-      })
-    );
-
-    // Fit bounds to show both points
-    const bounds = L.latLngBounds([vPos, dPos]);
-    if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [20, 20], maxZoom: 15 });
+    // 1. Update vehicle position without recreating marker
+    if (vehicleMarkerRef.current) {
+      vehicleMarkerRef.current.setLatLng([vLat, vLng]);
     }
-  }, [emergency.currentLatitude, emergency.currentLongitude, emergency.destinationLatitude, emergency.destinationLongitude, emergency.vehicleType, config]);
 
-  // ETA text for the overlay
+    // 2. Update destination position
+    if (destMarkerRef.current) {
+      destMarkerRef.current.setLatLng([dLat, dLng]);
+    }
+
+    // 3. Update route line coordinates seamlessly
+    if (polylineRef.current) {
+      const pts = routeGeometry.length > 0 ? routeGeometry : [[vLat, vLng], [dLat, dLng]];
+      polylineRef.current.setLatLngs(pts);
+      polylineRef.current.setStyle({ color: config.color });
+    }
+
+    // 4. Smoothly pan map to cover both points
+    const bounds = L.latLngBounds([[vLat, vLng], [dLat, dLng]]);
+    if (bounds.isValid() && mapRef.current) {
+      mapRef.current.fitBounds(bounds, { padding: [20, 20], maxZoom: 15, animate: true });
+    }
+  }, [vLat, vLng, dLat, dLng, routeGeometry, config.color]);
+
+  // ETA text for overlay badge
   const etaText = emergency.eta
     ? emergency.eta > 60
       ? `${Math.ceil(emergency.eta / 60)} min`
@@ -185,7 +225,7 @@ export default function MiniMap({ emergency, className = '' }: MiniMapProps) {
       <div
         ref={containerRef}
         className="w-full h-full"
-        style={{ minHeight: '100px' }}
+        style={{ minHeight: '110px' }}
       />
       {/* ETA overlay badge */}
       <div className="absolute top-2 right-2 z-[1000]">
@@ -211,22 +251,4 @@ export default function MiniMap({ emergency, className = '' }: MiniMapProps) {
       </div>
     </div>
   );
-}
-
-// Generate slightly curved waypoints between two coords
-function buildRoutePoints(a: [number, number], b: [number, number]): L.LatLngExpression[] {
-  const pts: L.LatLngExpression[] = [a];
-  const steps = 3;
-  for (let i = 1; i <= steps; i++) {
-    const t = i / (steps + 1);
-    const lat = a[0] + (b[0] - a[0]) * t;
-    const lng = a[1] + (b[1] - a[1]) * t;
-    const offset = (Math.random() - 0.5) * 0.002;
-    const dx = -(b[1] - a[1]);
-    const dy = b[0] - a[0];
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    pts.push([lat + (dx / len) * offset, lng + (dy / len) * offset]);
-  }
-  pts.push(b);
-  return pts;
 }

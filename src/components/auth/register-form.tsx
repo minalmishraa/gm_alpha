@@ -71,7 +71,7 @@ export function RegisterForm() {
         <div className="text-center space-y-2">
           <div className="text-5xl">🚑</div>
           <h1 className="text-2xl font-bold">Create Account</h1>
-          <p className="text-sm text-muted-foreground">Register for the SERIRAS emergency response system</p>
+          <p className="text-sm text-muted-foreground">Register for the Lifeline emergency response system</p>
         </div>
 
         <Card className="shadow-lg border-primary/10">

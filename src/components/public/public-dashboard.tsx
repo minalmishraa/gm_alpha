@@ -152,11 +152,11 @@ export function PublicDashboard() {
       ]);
       const emData = await emRes.json();
       const boardData = await boardRes.json();
-      const active = emData.emergencies.filter(
+      const active = (emData.emergencies || []).filter(
         (e: Emergency) => e.status === 'ACTIVE'
       );
       setActiveEmergencies(active);
-      setBoards(boardData.boards);
+      setBoards(boardData.boards || []);
       setLastUpdated(new Date());
       setTrackingError(null);
     } catch {
@@ -166,31 +166,30 @@ export function PublicDashboard() {
     }
   }, [setActiveEmergencies, setBoards]);
 
-  // ── GPS simulation tick: move vehicles + reload ──
-  const tickGPS = useCallback(async () => {
+  // ── Read-only emergency data refresh ──
+  const refreshEmergencies = useCallback(async () => {
     try {
-      await fetch('/api/gps-simulate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const emRes = await fetch('/api/emergencies');
+      if (!emRes.ok) return;
       const emData = await emRes.json();
-      const active = emData.emergencies.filter(
+      const active = (emData.emergencies || []).filter(
         (e: Emergency) => e.status === 'ACTIVE'
       );
       setActiveEmergencies(active);
       setLastUpdated(new Date());
-      broadcastLiveSync('GPS_TICK', active);
     } catch {
-      // Silent — don't spam errors
+      // Silent
     }
   }, [setActiveEmergencies]);
 
-  // ── Initial load + polling loop ──
+  // ── Initial load + light polling loop ──
   useEffect(() => {
     loadData();
-    intervalRef.current = setInterval(tickGPS, 4000);
+    intervalRef.current = setInterval(refreshEmergencies, 5000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [loadData, tickGPS]);
+  }, [loadData, refreshEmergencies]);
 
   // ── Auto detect GPS location on mount ──
   const detectGPSLocation = useCallback(() => {
